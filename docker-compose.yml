@@ -1,12 +1,15 @@
 services:
   backend:
     build: ./backend
+    # The API has no auth: publish it on loopback only. The frontend reaches it over the compose network.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - OLLAMA_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=gemma3:4b
+      - OLLAMA_TIMEOUT=120
       - DB_PATH=/data/outdoor.db
+      - CORS_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
     volumes:
       - outdoor_data:/data
     extra_hosts:
@@ -14,7 +17,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
 volumes:

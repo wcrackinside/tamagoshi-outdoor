@@ -2,7 +2,7 @@
 An open-model companion that nudges screen-bound adults into short, safe outdoor adventures.
 
 ## Quick start
-1. Install Python 3.10+ and Node 20+.
+1. Install Python 3.10+ and Node 20.19+ (or 22.12+).
 2. `cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload`
 3. In another terminal: `cd frontend && npm install && npm run dev`
 4. Open http://localhost:5173
@@ -22,6 +22,12 @@ Optional local AI:
 - On CPU-only machines a generation takes roughly 40–70 s, and the first call also loads the model,
   so `OLLAMA_TIMEOUT` defaults to 120 s.
 - Manual check against a running backend: `python scripts/smoke_api.py`.
+
+### Security notes
+- Single-user local app: no auth, no rate limiting. Keep the backend on localhost
+  (`npm run dev` and Docker Compose bind to 127.0.0.1; `npm run dev:lan` exposes the dev server on your network).
+- `CORS_ORIGINS` (comma-separated) controls which browser origins may call the API.
+- Full QA results and known limitations: [`docs/QA_REPORT.md`](docs/QA_REPORT.md).
 
 ## Features
 - Adult-focused, Spanish/English UI
