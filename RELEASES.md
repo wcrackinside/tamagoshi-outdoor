@@ -18,6 +18,10 @@
 ## R04 — Adult-friendly UX (0.4.0)
 - Responsive visual design, ES/EN, clear offline experience
 - Acceptance: usable on mobile without GPS, signup or payment
+- Status: WCAG AA text contrast (≥4.5:1) and ≥3:1 control borders, visible `:focus-visible` ring,
+  labeled controls, logical tab order, live region for progress/fallback notices, localized errors,
+  language from browser or `?lang=`, only the latest 3 pending missions shown by default.
+  Screenshots in `docs/screenshots/`.
 
 ## R05 — QA & hardening (0.5.0)
 - Test API, failure handling, security review, optional accessibility audit
