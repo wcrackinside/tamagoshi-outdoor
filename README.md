@@ -12,6 +12,17 @@ Optional local AI:
 - Copy `backend/.env.example` to `backend/.env` and set `OLLAMA_MODEL=gemma3:4b`
 - Without Ollama, the app explicitly returns curated demo missions.
 
+### How mission generation works
+- The backend asks Gemma for exactly three missions as JSON and validates them with a strict Pydantic schema:
+  exactly 3 items, string `title` (3–90 chars) and `description` (12–240 chars), distinct titles, no markup,
+  control characters or leaked JSON, and no unsafe terms (private property, roofs, traffic, spending money, GPS…).
+- Invalid output is retried once (`AI_ATTEMPTS`, default 2). If Gemma is still invalid or unreachable,
+  curated demo missions are returned and labeled: `source: "demo"` plus
+  `fallback_reason: "ai_unavailable"` or `"ai_invalid_output"`. The UI shows a DEMO badge and an explanation.
+- On CPU-only machines a generation takes roughly 40–70 s, and the first call also loads the model,
+  so `OLLAMA_TIMEOUT` defaults to 120 s.
+- Manual check against a running backend: `python scripts/smoke_api.py`.
+
 ## Features
 - Adult-focused, Spanish/English UI
 - 5/10/15 minute outdoor missions

@@ -1,4 +1,4 @@
-import os, json, sqlite3
+import os, re, sqlite3, logging
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
@@ -6,9 +6,10 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, field_validator
 
 load_dotenv()
+log = logging.getLogger("tamagoshi")
 app = FastAPI(title="Tamagoshi Outdoor")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173","http://127.0.0.1:5173"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent.parent / "outdoor.db"))
@@ -61,28 +62,93 @@ def fallback(minutes, lang):
         {"title":"Naturaleza urbana","description":"Recorre un camino público conocido y observa un árbol o planta que no habías notado."},
     ]
 
+BANNED_TERMS = [
+    "trespass", "private property", "cross traffic", "climb a roof", "rooftop", "railway track", "train track",
+    "at night alone", "drink alcohol", "buy ", "purchase", "spend money", "gps", "share your location", "photo proof",
+    "propiedad privada", "cruza el tráfico", "cruzar el tráfico", "sube al techo", "azotea", "vías del tren",
+    "de noche solo", "bebe alcohol", "compra ", "comprar", "gasta dinero", "comparte tu ubicación", "prueba fotográfica",
+]
+
 def safe(text):
-    banned = ["trespass", "private property", "cross traffic", "climb a roof", "propiedad privada", "cruza el tráfico", "sube al techo"]
-    return not any(term in text.lower() for term in banned)
+    lowered = text.lower()
+    return not any(term in lowered for term in BANNED_TERMS)
+
+MALFORMED_TEXT = re.compile(r"[\x00-\x1f\x7f{}\[\]<>]|[“”]\s*$|0x[0-9a-f]{8}", re.IGNORECASE)
+
+class AIMission(BaseModel):
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+    title: StrictStr = Field(min_length=3, max_length=90)
+    description: StrictStr = Field(min_length=12, max_length=240)
+
+    @field_validator("title", "description")
+    @classmethod
+    def well_formed(cls, value):
+        if MALFORMED_TEXT.search(value):
+            raise ValueError("contains markup, control characters or leaked JSON")
+        return value
+
+class AIMissionSet(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    missions: list[AIMission] = Field(min_length=3, max_length=3)
+
+def parse_ai_output(raw):
+    """Validate raw model text; raise ValueError if it is not exactly three safe, distinct missions."""
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("Empty model response")
+    start, end = raw.find("{"), raw.rfind("}")
+    if start == -1 or end < start:
+        raise ValueError("No JSON object in model response")
+    text = raw[start:end + 1]
+    try:
+        data = AIMissionSet.model_validate_json(text)
+    except ValidationError as exc:
+        raise ValueError(f"Model output failed schema validation: {exc.error_count()} error(s)") from exc
+    titles = {m.title.lower() for m in data.missions}
+    if len(titles) != 3:
+        raise ValueError("Duplicate mission titles")
+    for m in data.missions:
+        if not safe(m.title + " " + m.description):
+            raise ValueError("Unsafe mission content")
+    return [{"title": m.title, "description": m.description} for m in data.missions]
+
+LANGUAGE_NAMES = {"es": "Spanish", "en": "English"}
+
+def build_prompt(req):
+    return (
+        "You design safe, accessible outdoor micro-adventures for adults.\n"
+        'Respond ONLY with JSON: {"missions":[{"title":"...","description":"..."},'
+        '{"title":"...","description":"..."},{"title":"...","description":"..."}]}.\n'
+        f"Exactly 3 different missions, written entirely in {LANGUAGE_NAMES[req.language]}. "
+        f"Each takes about {req.minutes} minutes.\n"
+        "Use generic nearby places (a park, a street, a plaza); never name specific cities, parks or venues.\n"
+        "Only public, safe locations. Never require GPS, risky activity, spending money, "
+        "private property or proof of completion. Titles under 60 characters, descriptions under 180 characters.\n"
+        "Plain sentences only: no quotation marks, emojis, line breaks or markup inside titles or descriptions.\n"
+        f"User interests: {req.interests}"
+    )
+
+async def call_ollama(prompt):
+    timeout = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        # No "format": Ollama's grammar-constrained JSON made Gemma leak junk into strings or return HTTP 500.
+        payload = {
+            "model": os.getenv("OLLAMA_MODEL", "gemma3:4b"), "prompt": prompt, "stream": False,
+            "keep_alive": "15m", "options": {"num_predict": 400, "temperature": 0.5},
+        }
+        res = await client.post(os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/") + "/api/generate", json=payload)
+        res.raise_for_status()
+        return res.json()["response"]
 
 async def generate_ai(req):
-    prompt = f"""You design safe, accessible outdoor micro-adventures for adults. Respond ONLY with JSON: {{"missions":[{{"title":"...","description":"..."}}]}}. Exactly 3 missions, in language {req.language}. Duration {req.minutes} minutes each. Interests: {req.interests}. Only public, safe locations. Never require GPS, risky activity, spending money, private property or proof of completion. Keep each description under 180 characters."""
-    async with httpx.AsyncClient(timeout=12) as client:
-        res = await client.post(os.getenv("OLLAMA_URL","http://localhost:11434").rstrip("/") + "/api/generate",
-            json={"model":os.getenv("OLLAMA_MODEL","gemma3:4b"),"prompt":prompt,"stream":False,"format":"json"})
-        res.raise_for_status()
-        raw = res.json()["response"]
-        parsed = json.loads(raw)
-        items = parsed["missions"]
-        if not isinstance(items,list) or len(items)!=3:
-            raise ValueError("Expected three missions")
-        out=[]
-        for item in items:
-            title,desc=item["title"],item["description"]
-            if not isinstance(title,str) or not isinstance(desc,str) or not (3<=len(title)<=90 and 12<=len(desc)<=240) or not safe(title+" "+desc):
-                raise ValueError("Invalid mission")
-            out.append({"title":title,"description":desc})
-        return out
+    attempts = max(1, int(os.getenv("AI_ATTEMPTS", "2")))
+    prompt = build_prompt(req)
+    for attempt in range(1, attempts + 1):
+        try:
+            return parse_ai_output(await call_ollama(prompt))
+        except ValueError as exc:
+            if attempt == attempts:
+                raise
+            log.info("Retrying after invalid model output (attempt %d): %s", attempt, exc)
 
 @app.get("/health")
 def health():
@@ -91,10 +157,16 @@ def health():
 @app.post("/missions/generate")
 async def generate(req: GenerateRequest):
     source="gemma"
+    fallback_reason=None
     try:
         missions=await generate_ai(req)
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-        source="demo"
+    except httpx.HTTPError as exc:
+        source,fallback_reason="demo","ai_unavailable"
+        log.warning("Ollama unavailable, using demo missions: %s", exc.__class__.__name__)
+    except (ValueError, KeyError, TypeError) as exc:
+        source,fallback_reason="demo","ai_invalid_output"
+        log.warning("Rejected model output, using demo missions: %s", exc)
+    if source=="demo":
         missions=fallback(req.minutes,req.language)
     result=[]
     with db() as conn:
@@ -103,7 +175,7 @@ async def generate(req: GenerateRequest):
             cur=conn.execute("INSERT INTO missions(title,description,minutes,points,source) VALUES(?,?,?,?,?)",
                 (m["title"],m["description"],req.minutes,points,source))
             result.append({"id":cur.lastrowid,**m,"minutes":req.minutes,"points":points,"source":source,"completed_at":None})
-    return {"missions":result,"source":source}
+    return {"missions":result,"source":source,"fallback_reason":fallback_reason}
 
 @app.get("/missions")
 def missions():
