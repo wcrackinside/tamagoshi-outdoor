@@ -31,6 +31,7 @@
 ## R06 — Submission pack (1.0.0)
 - README, screenshots, 90-second demo, DEV article in English, license, competition checklist
 - Acceptance: links work and claims reflect tested implementation
+- Status: README, storyboard, English article draft and checklist with verified rules are in the repo.
+  Pending (owner): public repo URL, demo video, real outing, publishing on DEV.
 
-Scaffold included: R01–R04 baseline + minimal R05 tests + R06 templates.
 Not included: real-world GPS verification, production auth, hosting, automated narrative memory.
