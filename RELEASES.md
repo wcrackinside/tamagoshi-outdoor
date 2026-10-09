@@ -11,6 +11,9 @@
 ## R03 — Adventure loop (0.3.0)
 - Mission completion, points, journal, persistence
 - Acceptance: completing a mission once adds points; duplicate completion rejected
+- Status: completion is a single conditional `UPDATE … WHERE completed_at IS NULL`, so concurrent
+  requests award points once (others get 409). `tests/test_adventure_loop.py` covers the full loop,
+  concurrency and persistence across a real uvicorn restart.
 
 ## R04 — Adult-friendly UX (0.4.0)
 - Responsive visual design, ES/EN, clear offline experience

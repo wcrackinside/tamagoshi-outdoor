@@ -16,7 +16,7 @@ DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent.parent / "out
 
 @contextmanager
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     try:
@@ -187,13 +187,14 @@ def missions():
 def complete(mission_id:int, body:CompleteRequest):
     now=datetime.now(timezone.utc).isoformat()
     with db() as conn:
-        row=conn.execute("SELECT * FROM missions WHERE id=?",(mission_id,)).fetchone()
-        if not row: raise HTTPException(404,"Mission not found")
-        if row["completed_at"]: raise HTTPException(409,"Already completed")
-        conn.execute("UPDATE missions SET completed_at=? WHERE id=?",(now,mission_id))
+        claimed=conn.execute("UPDATE missions SET completed_at=? WHERE id=? AND completed_at IS NULL",(now,mission_id)).rowcount
+        if not claimed:
+            exists=conn.execute("SELECT 1 FROM missions WHERE id=?",(mission_id,)).fetchone()
+            raise HTTPException(409 if exists else 404,"Already completed" if exists else "Mission not found")
         conn.execute("INSERT INTO journal(mission_id,reflection,created_at) VALUES(?,?,?)",
             (mission_id,body.reflection.strip(),now))
-    return {"completed":True,"points":row["points"]}
+        points=conn.execute("SELECT points FROM missions WHERE id=?",(mission_id,)).fetchone()["points"]
+    return {"completed":True,"points":points}
 
 @app.get("/journal")
 def journal():
