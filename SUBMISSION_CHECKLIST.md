@@ -1,0 +1,13 @@
+# Submission checklist — verify against official rules
+- [ ] Confirm event dates, time zone and country eligibility using official rules
+- [ ] Confirm category and whether model qualifies as open/open-weight
+- [ ] Create new repository within eligible development period
+- [ ] Publish source code with LICENSE and README
+- [ ] Run API tests and frontend build
+- [ ] Capture real demo of Gemma running (not demo fallback)
+- [ ] Show a real completed outdoor mission
+- [ ] Record 90-second demo video
+- [ ] Write article in English following official DEV submission template
+- [ ] Attribute any borrowed assets and code
+- [ ] Test all public links without authentication
+- [ ] Submit before deadline and retain confirmation
