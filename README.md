@@ -92,7 +92,9 @@ $env:CORS_ORIGINS='https://outdoor-staging.privantix.io'; $env:DB_PATH="$PWD\bac
 
 The script reads credentials from `C:\09_IA\sftp\config.env` (never commit it), backs up the remote
 folder into `deploy-backups/`, writes `config.js` with the API URL and uploads `index.html` last.
-A quick tunnel gets a new URL on every restart, so rerun the script with `-SkipBuild` after restarting it.
+A quick tunnel gets a new URL on every restart. `scripts/staging_watchdog.ps1` does all of the above unattended:
+every minute it restarts the backend or the tunnel if they are down and re-uploads `config.js` when the tunnel URL
+changes (logs in `staging-logs/`). Stop it, and the `python`/`cloudflared` processes it started, to take staging offline.
 
 ## Project docs
 - [`RELEASES.md`](RELEASES.md): release plan R01–R06 and status
