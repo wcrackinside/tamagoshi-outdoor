@@ -81,6 +81,16 @@ def test_sql_injection_in_reflection_is_stored_as_text(client, monkeypatch):
     assert client.get("/missions").status_code == 200
 
 
+def test_second_generation_is_rejected_while_one_is_running(client, monkeypatch):
+    class Busy:
+        def locked(self):
+            return True
+    monkeypatch.setattr(main, "GENERATE_LOCK", Busy())
+    before = len(client.get("/missions").json()["missions"])
+    assert client.post("/missions/generate", json={}).status_code == 429
+    assert len(client.get("/missions").json()["missions"]) == before
+
+
 def test_requests_carry_no_personal_data_fields():
     assert set(main.GenerateRequest.model_fields) == {"interests", "minutes", "language"}
     assert set(main.CompleteRequest.model_fields) == {"reflection"}

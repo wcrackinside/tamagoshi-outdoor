@@ -1,4 +1,4 @@
-import os, re, sqlite3, logging
+import asyncio, os, re, sqlite3, logging
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
@@ -162,8 +162,17 @@ async def generate_ai(req):
 def health():
     return {"ok":True}
 
+GENERATE_LOCK = asyncio.Lock()
+
 @app.post("/missions/generate")
 async def generate(req: GenerateRequest):
+    # Gemma runs on a single CPU host; queuing requests would only stack multi-minute waits.
+    if GENERATE_LOCK.locked():
+        raise HTTPException(429, "Busy generating missions")
+    async with GENERATE_LOCK:
+        return await _generate(req)
+
+async def _generate(req):
     source="gemma"
     fallback_reason=None
     try:

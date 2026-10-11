@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import './style.css';
-const api=async(path,options)=>{let r;try{r=await fetch('/api'+path,{headers:{'Content-Type':'application/json'},...options})}catch{const e=new Error('network');e.status=0;throw e}if(!r.ok){let detail='HTTP '+r.status;try{const b=await r.json();if(typeof b.detail==='string')detail=b.detail}catch{}const e=new Error(detail);e.status=r.status;throw e}return r.json()};
+const api=async(path,options)=>{let r;try{r=await fetch((window.TAMAGOSHI_API||'/api')+path,{headers:{'Content-Type':'application/json'},...options})}catch{const e=new Error('network');e.status=0;throw e}if(!r.ok){let detail='HTTP '+r.status;try{const b=await r.json();if(typeof b.detail==='string')detail=b.detail}catch{}const e=new Error(detail);e.status=r.status;throw e}return r.json()};
 const VISIBLE=3,TITLE='Tamagoshi Outdoor';
 const initialLang=()=>{const q=new URLSearchParams(location.search).get('lang');if(q==='es'||q==='en')return q;return(navigator.language||'es').toLowerCase().startsWith('es')?'es':'en'};
 function App(){
@@ -11,7 +11,7 @@ function App(){
  const[completing,setCompleting]=useState(null);
  const t=(es,en)=>lang==='es'?es:en;
  useEffect(()=>{document.documentElement.lang=lang},[lang]);
- const message=e=>e.status===0?t('No se pudo conectar con el servidor. ¿Está encendido el backend?','Could not reach the server. Is the backend running?'):e.status===409?t('Esa misión ya estaba registrada. No se sumaron puntos de nuevo.','That mission was already logged. No points were added twice.'):e.status===404?t('Esa misión ya no existe.','That mission no longer exists.'):t('Algo salió mal','Something went wrong')+' ('+e.message+')';
+ const message=e=>e.status===0?t('No se pudo conectar con el servidor. ¿Está encendido el backend?','Could not reach the server. Is the backend running?'):e.status===409?t('Esa misión ya estaba registrada. No se sumaron puntos de nuevo.','That mission was already logged. No points were added twice.'):e.status===404?t('Esa misión ya no existe.','That mission no longer exists.'):e.status===429?t('Gemma está creando misiones para otra persona. Inténtalo en un par de minutos.','Gemma is creating missions for someone else. Try again in a couple of minutes.'):t('Algo salió mal','Something went wrong')+' ('+e.message+')';
  const refresh=()=>Promise.all([api('/missions'),api('/journal')]).then(([m,j])=>{setMissions(m.missions);setJournal(j)}).catch(e=>setError(e)).finally(()=>setLoading(false));
  useEffect(()=>{refresh()},[]);
  useEffect(()=>{const reset=()=>{if(!document.hidden)document.title=TITLE};document.addEventListener('visibilitychange',reset);return()=>document.removeEventListener('visibilitychange',reset)},[]);
