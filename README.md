@@ -77,6 +77,23 @@ Single-user local app: no auth and no rate limiting. Keep the backend on localho
 | POST | `/missions/{id}/complete` | `{reflection?}` → 200 once, then 409 |
 | GET | `/journal` | entries and `total_points` |
 
+## Staging deploy
+
+The static frontend is uploaded over FTPS to shared hosting; the backend and Gemma keep running on the
+developer machine and are exposed through a Cloudflare Tunnel. Only one generation runs at a time
+(a second request gets HTTP 429). All visitors share one mission list and journal, so staging is for demos, not personal data.
+
+```powershell
+# backend with the staging origin allowed and its own database
+$env:CORS_ORIGINS='https://outdoor-staging.privantix.io'; $env:DB_PATH="$PWD\backend\staging.db"; $env:OLLAMA_TIMEOUT='240'
+# then: uvicorn on 127.0.0.1:8000, and  cloudflared tunnel --url http://127.0.0.1:8000
+.\scripts\deploy_staging.ps1 -ApiUrl https://<tunnel>.trycloudflare.com
+```
+
+The script reads credentials from `C:\09_IA\sftp\config.env` (never commit it), backs up the remote
+folder into `deploy-backups/`, writes `config.js` with the API URL and uploads `index.html` last.
+A quick tunnel gets a new URL on every restart, so rerun the script with `-SkipBuild` after restarting it.
+
 ## Project docs
 - [`RELEASES.md`](RELEASES.md): release plan R01–R06 and status
 - [`docs/DEMO_STORYBOARD.md`](docs/DEMO_STORYBOARD.md): 90-second demo plan
