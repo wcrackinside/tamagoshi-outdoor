@@ -58,3 +58,17 @@ uvicorn restart), `test_security.py` (CORS, prompt-injection handling, SQL-injec
 - **Completion is self-reported**: points reflect what the user logs, not verified outdoor activity.
 - **Journal is local and unencrypted** in SQLite; there is no export, edit or delete UI.
 - Tested on Windows only; Python 3.10 locally (the Docker image uses 3.11).
+
+## Updates after R05 (2026-10-11)
+
+- `python -m pytest`: **65 passed** (new: a second generation while one is running gets HTTP 429 and stores nothing).
+  `npm run build` OK.
+- Browser notification when missions are ready (only if the tab is hidden; otherwise the tab title gets a ✓). Checked
+  in the browser with a stubbed `Notification`: one notification with the three mission titles.
+- Staging: the static frontend is on shared hosting; the backend runs on the developer machine behind a Cloudflare
+  quick tunnel. Checked live: CORS allows only the staging origin (plus localhost), and a generation from that origin
+  through the tunnel returned `source: gemma` in 120 s.
+- **Staging risk**: this deliberately exposes the API publicly, against the single-user limitation above. Mitigations:
+  one generation at a time (429 otherwise), a separate `staging.db`, no personal data fields. Still no authentication:
+  anyone with the URL can read and write the shared mission list and journal, and can keep Gemma busy. Stop the tunnel
+  when the demo is over.

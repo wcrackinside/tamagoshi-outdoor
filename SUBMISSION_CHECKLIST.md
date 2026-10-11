@@ -29,16 +29,19 @@ Verified on 2026-10-09 against the official pages. Re-check them before submitti
 
 - [x] Open-weight model at the core (Gemma 3 4B via Ollama, local inference)
 - [x] Source with MIT LICENSE and README
-- [x] Tests and build run (`docs/QA_REPORT.md`: 64 tests, build OK, audits clean)
+- [x] Tests and build run (`docs/QA_REPORT.md`: 65 tests, build OK, audits clean)
 - [x] Gemma generation verified live in Spanish and English; fallback labeled
 - [x] Screenshots from the real app (`docs/screenshots/`, provenance noted)
 - [x] Article draft in English following the challenge's section structure (`docs/DEV_ARTICLE_DRAFT.md`)
 - [x] 90-second storyboard (`docs/DEMO_STORYBOARD.md`)
 - [ ] **You confirm** you are eligible (age, residence, not a sponsor employee)
 - [ ] **You confirm** the project was started on/after Oct 5, 2026 9:00 AM PDT (local repo's first commit: 2026-10-09 UTC; scaffold files dated 2026-10-08)
-- [ ] Create a **public** GitHub repo and push; check it opens without logging in
+- [x] Public repo pushed and checked logged out (HTTP 200): https://github.com/wcrackinside/tamagoshi-outdoor
+- [x] Repo URL and screenshot URLs filled in the article draft
+- [ ] Optional deployed demo: https://outdoor-staging.privantix.io (frontend uploaded; needs the `outdoor-staging` DNS
+      record in Cloudflare, and the developer machine running backend + Ollama + tunnel). A video is still the safer demo.
 - [ ] Record the 90 s video (real Gemma run, real outing); upload as public/unlisted and test the link logged out
 - [ ] Do at least one real mission outside and write about it (bonus points)
 - [ ] Click "Touch Grass Submission Template" on the challenge page; align the draft's headings with it
-- [ ] Upload screenshots to DEV, fill every TODO in the article, publish before the deadline
+- [ ] Fill the remaining personal TODOs in the article (motivation, video link, offline recording, real outing), publish before the deadline
 - [ ] Keep the published URL; note any post-deadline commits in the README

@@ -26,7 +26,7 @@
 ## R05 — QA & hardening (0.5.0)
 - Test API, failure handling, security review, optional accessibility audit
 - Acceptance: tests pass; fallback identified; no personal data required
-- Status: see `docs/QA_REPORT.md` (64 tests, audits clean, CORS/prompt-injection review, limitations).
+- Status: see `docs/QA_REPORT.md` (65 tests, audits clean, CORS/prompt-injection review, limitations).
 
 ## R06 — Submission pack (1.0.0)
 - README, screenshots, 90-second demo, DEV article in English, license, competition checklist
