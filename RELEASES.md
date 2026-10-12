@@ -34,4 +34,11 @@
 - Status: README, storyboard, English article draft and checklist with verified rules are in the repo.
   Pending (owner): public repo URL, demo video, real outing, publishing on DEV.
 
+## R07 — Staging validation (1.1.0)
+- Functional, language and security validation of the public staging deployment; fix confirmed defects
+- Acceptance: desktop/mobile load, Gemma generation, complete/points/journal, persistence and ES/EN pass in the browser
+- Status: async generation jobs (survive the ~100 s proxy limit), favicon, localized default interests,
+  `.htaccess` hardening (HTTPS, CSP, no listing), `EXPOSE_DOCS=0` on staging, steadier watchdog. 74 tests.
+  See `docs/STAGING_VALIDATION.md`. Production deploy pending owner approval.
+
 Not included: real-world GPS verification, production auth, hosting, automated narrative memory.

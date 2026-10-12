@@ -72,3 +72,9 @@ uvicorn restart), `test_security.py` (CORS, prompt-injection handling, SQL-injec
   one generation at a time (429 otherwise), a separate `staging.db`, no personal data fields. Still no authentication:
   anyone with the URL can read and write the shared mission list and journal, and can keep Gemma busy. Stop the tunnel
   when the demo is over.
+
+## R07 staging validation (2026-10-11)
+
+`python -m pytest`: **74 passed**. Browser validation of staging, defects fixed and remaining observations are in
+[STAGING_VALIDATION.md](STAGING_VALIDATION.md). The "no analytics" statement above applies to the app; on staging the
+Cloudflare proxy injects its Web Analytics beacon.

@@ -1,16 +1,18 @@
-import asyncio, os, re, sqlite3, logging
+import asyncio, os, re, sqlite3, logging, time, uuid
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, field_validator
 
 load_dotenv()
 log = logging.getLogger("tamagoshi")
-app = FastAPI(title="Tamagoshi Outdoor")
+DOCS = os.getenv("EXPOSE_DOCS", "1") != "0"
+app = FastAPI(title="Tamagoshi Outdoor", docs_url="/docs" if DOCS else None,
+              redoc_url="/redoc" if DOCS else None, openapi_url="/openapi.json" if DOCS else None)
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False, allow_methods=["GET","POST"], allow_headers=["Content-Type"])
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent.parent / "outdoor.db"))
@@ -171,6 +173,39 @@ async def generate(req: GenerateRequest):
         raise HTTPException(429, "Busy generating missions")
     async with GENERATE_LOCK:
         return await _generate(req)
+
+# Proxies such as Cloudflare cut requests after ~100 s, and Gemma on CPU can take longer,
+# so the UI starts a job and polls it instead of holding one long request open.
+JOBS = {}
+JOB_TTL_SECONDS = 3600
+
+@app.post("/missions/jobs", status_code=202)
+async def start_generation(req: GenerateRequest, background: BackgroundTasks):
+    cutoff = time.time() - JOB_TTL_SECONDS
+    for job_id in [j for j, v in JOBS.items() if v["status"] != "running" and v["created"] < cutoff]:
+        del JOBS[job_id]
+    if GENERATE_LOCK.locked() or any(j["status"] == "running" for j in JOBS.values()):
+        raise HTTPException(429, "Busy generating missions")
+    job_id = uuid.uuid4().hex
+    JOBS[job_id] = {"status": "running", "created": time.time(), "result": None}
+    background.add_task(_run_job, job_id, req)
+    return {"job_id": job_id, "status": "running"}
+
+async def _run_job(job_id, req):
+    try:
+        async with GENERATE_LOCK:
+            result = await _generate(req)
+        JOBS[job_id].update(status="done", result=result)
+    except Exception:
+        log.exception("Generation job %s failed", job_id)
+        JOBS[job_id]["status"] = "error"
+
+@app.get("/missions/jobs/{job_id}")
+def generation_job(job_id: str):
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return {"job_id": job_id, "status": job["status"], "result": job["result"]}
 
 async def _generate(req):
     source="gemma"

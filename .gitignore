@@ -10,3 +10,4 @@ venv/
 *.log
 deploy-backups/
 staging-logs/
+frontend/validation-output/

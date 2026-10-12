@@ -18,7 +18,9 @@ function Test-Url($url) {
 function Start-Backend {
   $env:CORS_ORIGINS = "$Origin,http://localhost:5173,http://127.0.0.1:5173"
   $env:DB_PATH = Join-Path $root 'backend\staging.db'
-  $env:OLLAMA_TIMEOUT = '240'
+  # Jobs are polled by the UI for up to 10 minutes, so Gemma may take longer than the old proxy limit.
+  $env:OLLAMA_TIMEOUT = '420'
+  $env:EXPOSE_DOCS = '0'
   Start-Process -FilePath (Join-Path $root 'backend\.venv\Scripts\python.exe') -WorkingDirectory (Join-Path $root 'backend') `
     -ArgumentList '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000' -WindowStyle Hidden `
     -RedirectStandardOutput (Join-Path $logs 'backend.out.log') -RedirectStandardError (Join-Path $logs 'backend.err.log')
@@ -40,7 +42,11 @@ function Get-TunnelUrl {
 
 $failures = 0
 while ($true) {
-  if (-not (Test-Url 'http://127.0.0.1:8000/health')) { Start-Backend; Start-Sleep 10 }
+  # While Gemma saturates the CPU /health can be slow; only restart when nothing listens on the port.
+  if (-not (Test-Url 'http://127.0.0.1:8000/health')) {
+    if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { Log 'backend slow, still listening' }
+    else { Start-Backend; Start-Sleep 10 }
+  }
   if (-not (Get-Process cloudflared -ErrorAction SilentlyContinue)) { Start-Tunnel; Start-Sleep 20 }
 
   $url = Get-TunnelUrl

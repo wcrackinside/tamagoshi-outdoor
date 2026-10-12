@@ -91,6 +91,16 @@ def test_second_generation_is_rejected_while_one_is_running(client, monkeypatch)
     assert len(client.get("/missions").json()["missions"]) == before
 
 
+@pytest.mark.parametrize("flag,exposed", [("1", True), ("0", False)])
+def test_api_docs_can_be_hidden(flag, exposed):
+    import os, subprocess, sys
+    code = "from app.main import app; print(app.openapi_url, app.docs_url, app.redoc_url)"
+    env = {**os.environ, "EXPOSE_DOCS": flag}
+    out = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True,
+                         cwd=os.path.dirname(os.path.dirname(__file__))).stdout.split()
+    assert out == (["/openapi.json", "/docs", "/redoc"] if exposed else ["None", "None", "None"])
+
+
 def test_requests_carry_no_personal_data_fields():
     assert set(main.GenerateRequest.model_fields) == {"interests", "minutes", "language"}
     assert set(main.CompleteRequest.model_fields) == {"reflection"}

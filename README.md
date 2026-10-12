@@ -58,7 +58,7 @@ The compose file is validated but the images were not built during QA; see the Q
 
 ## Tests and QA
 ```bash
-cd backend && python -m pytest          # 65 tests
+cd backend && python -m pytest          # 74 tests
 cd frontend && npm run build
 python backend/scripts/smoke_api.py     # live check against a running backend + Ollama
 ```
