@@ -38,8 +38,9 @@ Verified on 2026-10-09 against the official pages. Re-check them before submitti
 - [ ] **You confirm** the project was started on/after Oct 5, 2026 9:00 AM PDT (local repo's first commit: 2026-10-09 UTC; scaffold files dated 2026-10-08)
 - [x] Public repo pushed and checked logged out (HTTP 200): https://github.com/wcrackinside/tamagoshi-outdoor
 - [x] Repo URL and screenshot URLs filled in the article draft
-- [ ] Optional deployed demo: https://outdoor-staging.privantix.io (frontend uploaded; needs the `outdoor-staging` DNS
-      record in Cloudflare, and the developer machine running backend + Ollama + tunnel). A video is still the safer demo.
+- [x] Deployed demo live: https://outdoor-staging.privantix.io (Cloudflare A record → hosting; checked 2026-10-11 22:39
+      UTC-3: page over HTTPS, Gemma generated three missions in 104 s). Only works while the developer machine runs
+      backend + Ollama + tunnel, so a video is still the safer demo.
 - [ ] Record the 90 s video (real Gemma run, real outing); upload as public/unlisted and test the link logged out
 - [ ] Do at least one real mission outside and write about it (bonus points)
 - [ ] Click "Touch Grass Submission Template" on the challenge page; align the draft's headings with it
